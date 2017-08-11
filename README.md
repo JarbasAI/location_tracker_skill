@@ -4,9 +4,9 @@ Passive skill that updates location every 15 minutes from ip adress
 
 # TODO
 
-intent to trigger update
-activate/deactivate intent
-more localization sources support (GPS)
+    intent to trigger update
+    activate/deactivate intent
+    more localization sources support (GPS)
 
 # Requires
 
