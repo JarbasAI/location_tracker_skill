@@ -4,13 +4,13 @@ Track location
 
 # usage
 
-current location - current config location
-where am i - update and speak location
-activate location tracking - start updating location
-deactivate location tracking - stop updating location
-activate location injection - start injecting location adapt context
-deactivate location injection - stop injecting location adapt context
-update location - trigger update
+        current location - current config location
+        where am i - update and speak location
+        activate location tracking - start updating location
+        deactivate location tracking - stop updating location
+        activate location injection - start injecting location adapt context
+        deactivate location injection - stop injecting location adapt context
+        update location - trigger update
 
 # TODO
 
