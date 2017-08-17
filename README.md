@@ -1,6 +1,6 @@
 # Location Tracker Skill
 
-Track location
+Track location from ip adress, inject location context
 
 # usage
 
@@ -15,6 +15,8 @@ Track location
 # TODO
 
 - more sources (GPS)
+
+- dont track but inject context timer
 
 
 # configurable
