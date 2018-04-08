@@ -24,6 +24,7 @@ unchanged
 * local ip database
 * more accurate sources (GPS, wifi geo location)
 * take device uuid into account
+* get timezone from system time
 
 
 ## known issues
