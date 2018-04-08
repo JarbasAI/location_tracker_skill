@@ -16,7 +16,7 @@ class LocationTrackerSkill(MycroftSkill):
         if "update_source" not in self.settings:
             self.settings["update_source"] = "remote_ip_geo"
         if "tracking" not in self.settings:
-            self.settings["tracking"] = True
+            self.settings["tracking"] = False
         if "auto_context" not in self.settings:
             self.settings["auto_context"] = False
         if "ip_api_url" not in self.settings:

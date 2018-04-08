@@ -29,6 +29,7 @@ unchanged
 
 ## known issues
 
+* config may get messed up <- hunting bug do not use while this is here
 * ip address location is unreliable, weather skill may be completely off for example
 * if using proxy/vpn location will be wrong
 * if using multiple devices settings changes (not location data) will propagate via mycroft.home
