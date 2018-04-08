@@ -1,47 +1,36 @@
-# Location Tracker Skill
+## Location Tracker Skill
 
-Track location from ip adress, inject location context
+Track location on device
 
-# usage
+## Description
 
-        current location - current config location
-        where am i - update and speak location
-        activate location tracking - start updating location
-        deactivate location tracking - stop updating location
-        activate location injection - start injecting location adapt context
-        deactivate location injection - stop injecting location adapt context
-        update location - trigger update
+Updates device location, the mycroft home location configuration remains
+unchanged
 
-# TODO
+* gives you privacy
+* skills that need location still work ( date time correct by default)
+* fully configurable
 
-- more sources (GPS)
+## Examples
 
-- dont track but inject context timer
+* "current location"
+* "activate location tracking"
+* "deactivate location tracking"
+* "update location"
 
+## TODO
 
-# configurable
-
-timer minutes
-
-        self.minutes = self.config.get("location").get("update_mins", 15)
-
-source of location update (ip only for now)
-
-        self.source = self.config.get("location").get("update_source", "ip")
-
-active
-
-        self.active = self.config.get("location").get("tracking", True)
-
-inject adapt "Location" context
-
-        self.auto_context = self.config.get("location").get("auto_context",True)
-
-# Requires
-
-run time update of config [PR980](https://github.com/MycroftAI/mycroft-core/pull/980)
+* more accurate sources (GPS, wifi geo location)
+* take device uuid into account
 
 
-# know issues
+## known issues
 
-if using proxy/vpn location will be wrong
+* ip address location is unreliable, weather skill may be completely off for example
+* if using proxy/vpn location will be wrong
+* if using multiple devices settings changes (not location data) will propagate via mycroft.home
+
+
+## Credits
+
+* JarbasAI

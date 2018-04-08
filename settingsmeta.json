@@ -1,0 +1,43 @@
+{
+  "name": "Device Location Tracker Skill",
+  "skillMetadata":
+  {"sections": [
+
+    {
+      "name": "Configuration",
+      "fields":
+        [
+          {
+            "type": "label",
+            "label": "Currently this skill can only track location from IP address and this field is ignored, soon wifi geolocation wil be added, and eventually GPS"
+          },
+          {
+            "type": "text",
+            "name": "update_source_X",
+            "value": "ip",
+            "label": "where to get location data from"
+          },
+          {
+            "type": "label",
+            "label": "Is location tracking active?"
+          },
+          {
+            "type": "checkbox",
+            "name": "tracking",
+            "value": "false",
+            "label": "tracking"
+          },
+          {
+            "type": "label",
+            "label": "At which interval, in minutes, should location be updated?"
+          },
+          {
+            "type": "number",
+            "name": "update_mins",
+            "value": "15",
+            "label": "update interval"}
+        ]
+    }
+  ]
+  }
+}
