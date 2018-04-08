@@ -19,7 +19,7 @@
           },
           {
             "type": "label",
-            "label": "Is location tracking active?"
+            "label": "Is location tracking active? disabling this reverts location"
           },
           {
             "type": "checkbox",

@@ -4,7 +4,7 @@ from mycroft.messagebus.message import Message
 from threading import Timer
 import unirest
 from mycroft.util import connected
-
+from mycroft.configuration.config import Configuration, RemoteConf, DEFAULT_CONFIG
 __author__ = 'jarbas'
 
 
@@ -23,6 +23,18 @@ class LocationTrackerSkill(MycroftSkill):
         self.timer = Timer(60 * self.settings["update_mins"],
                            self.get_location)
         self.timer.setDaemon(True)
+
+        self.settings.set_changed_callback(self.reset_location)
+
+    @property
+    def home_location(self):
+        conf = Configuration.load_config_stack([RemoteConf(DEFAULT_CONFIG)])
+        return conf.get("location", {})
+
+    def reset_location(self):
+        if not self.settings["tracking"]:
+            self.emitter.emit(Message("configuration.patch",
+                                      {"config": self.home_location}))
 
     def initialize(self):
         intent = IntentBuilder("UpdateLocationIntent") \
@@ -92,7 +104,9 @@ class LocationTrackerSkill(MycroftSkill):
             self.timer.cancel()
             self.speak("Location tracking from " +
                        self.settings["update_source"] + " deactivated")
-        self.settings.store()
+            self.settings.store()
+            self.emitter.emit(Message("configuration.patch",
+                                      {"config": self.home_location}))
 
     def handle_activate_tracking_intent(self, message):
         if self.settings["tracking"]:
