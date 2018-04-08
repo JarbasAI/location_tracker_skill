@@ -14,7 +14,7 @@
           {
             "type": "text",
             "name": "update_source_X",
-            "value": "ip",
+            "value": "remote_ip_geo",
             "label": "where to get location data from"
           },
           {
@@ -35,7 +35,18 @@
             "type": "number",
             "name": "update_mins",
             "value": "15",
-            "label": "update interval"}
+            "label": "update interval"
+          },
+          {
+            "type": "label",
+            "label": "This is the api where we get ip location data from"
+          },
+          {
+            "type": "text",
+            "name": "ip_api_url",
+            "value": "https://ipapi.co/json/",
+            "label": "url"
+          }
         ]
     }
   ]

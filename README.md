@@ -20,6 +20,8 @@ unchanged
 
 ## TODO
 
+* use options in settingsmeta instead of text field
+* local ip database
 * more accurate sources (GPS, wifi geo location)
 * take device uuid into account
 

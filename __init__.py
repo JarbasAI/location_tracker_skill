@@ -14,14 +14,16 @@ class LocationTrackerSkill(MycroftSkill):
         if "update_mins" not in self.settings:
             self.settings["update_mins"] = 15
         if "update_source" not in self.settings:
-            self.settings["update_source"] = "ip"
+            self.settings["update_source"] = "remote_ip_geo"
         if "tracking" not in self.settings:
             self.settings["tracking"] = True
         if "auto_context" not in self.settings:
             self.settings["auto_context"] = False
+        if "ip_api_url" not in self.settings:
+            self.settings["ip_api_url"] = "https://ipapi.co/json/"
 
         self.timer = Timer(60 * self.settings["update_mins"],
-                           self.get_location)
+                           self.update_location)
         self.timer.setDaemon(True)
 
         self.settings.set_changed_callback(self.reset_location)
@@ -129,40 +131,41 @@ class LocationTrackerSkill(MycroftSkill):
             self.set_context('Location', city + ', ' + country)
 
     def handle_where_am_i_intent(self, message):
-        ip = message.context.get("ip")
-        if ip:
-            config = self.from_ip(update=False)
-            if config != {}:
-                city = config.get("location", {}).get("city", {})\
-                    .get("name","unknown city")
-                country = config.get("location", {}).get("city", {}).get(
-                    "region").get("country").get("name", "unknown country")
-                self.speak(
-                    "your ip address says you are in " + city + " in " +
-                    country)
-        else:
-            config = self.get_location()
-            if config != {}:
-                city = config.get("location", {}).get("city", {})\
-                    .get("name", "unknown city")
-                country = config.get("location", {}).get("city", {}).get(
-                    "region").get("country").get("name", "unknown country")
-                self.speak(
-                    "your ip address says you are in " + city + " in " +
-                    country)
+        # TODO dialog files
+        if connected():
+            ip = message.context.get("ip")
+            if ip:
+                config = self.from_remote_ip(update=False)
+                if config != {}:
+                    city = config.get("location", {}).get("city", {})\
+                        .get("name","unknown city")
+                    country = config.get("location", {}).get("city", {}).get(
+                        "region").get("country").get("name", "unknown country")
+                    self.speak(
+                        "your ip address says you are in " + city + " in " +
+                        country)
+                    return
+            else:
+                config = self.update_location()
+                if config != {}:
+                    self.speak(
+                        "your ip address says you are in " + self.location_pretty)
+                    return
+
+        self.speak("No internet connection, could not update "
+                             "location from ip address")
 
     def handle_update_intent(self, message):
         if connected():
+            # TODO source select
+            source = self.settings["update_source"]
             self.speak("updating location from ip address")
-            config = self.get_location("ip")
-            city = config.get("city", {}).get("name", "unknown city")
-            country = config.get("city", {}).get("region").get("country")\
-                .get("name", "unknow country")
-            self.speak(city + " " + country)
+            self.update_location(source)
+            self.speak(self.location_pretty)
         else:
             self.speak("Cant do that offline")
 
-    def from_ip(self, update = True):
+    def from_remote_ip(self, update = True):
         self.log.info("Retrieving location data from ip address")
         if connected():
             response = unirest.get("https://ipapi.co/json/")
@@ -192,18 +195,18 @@ class LocationTrackerSkill(MycroftSkill):
             config = {"location": location_data}
             if update:
                 self.emitter.emit(Message("configuration.patch",
-                                          {"config": config }))
+                                          {"config": config}))
             return config
         else:
             self.log.warning("No internet connection, could not update "
                              "location from ip address")
             return {}
 
-    def get_location(self, source=None):
+    def update_location(self, source=None):
         if source is None:
             source = self.settings["update_source"]
-        if source == "ip":
-            config = self.from_ip()
+        if source == "remote_ip_geo":
+            config = self.from_remote_ip()
             if config != {}:
                 city = config.get("location", {}).get("city", {})\
                     .get("name", "unknown city")
