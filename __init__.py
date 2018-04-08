@@ -174,14 +174,18 @@ class LocationTrackerSkill(MycroftSkill):
             lon = response.body.get("longitude")
             lat = response.body.get("latitude")
             timezone = response.body.get("timezone")
+            if timezone is None:
+                timezone_data = self.home_location.get("timezone")
+            else:
+                timezone_data = {"code": timezone, "name": timezone,
+                                 "dstOffset": 3600000,
+                                 "offset": -21600000}
 
             region_data = {"code": region_code, "name": region,
                            "country": {"code": country, "name": country_name}}
             city_data = {"code": city, "name": city, "state": region_data,
                          "region": region_data}
-            timezone_data = {"code": timezone, "name": timezone,
-                             "dstOffset": 3600000,
-                             "offset": -21600000}
+
             coordinate_data = {"latitude": float(lat), "longitude": float(lon)}
             location_data = {"city": city_data, "coordinate": coordinate_data,
                              "timezone": timezone_data}
