@@ -222,8 +222,8 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak("Cant do that offline")
 
     @intent_handler(IntentBuilder("WrongLocationIntent")
-                    .require("wrong").require("LocationKeyword")
-                    .optionally("ConfigKeyword").require("adapt_trigger"))
+                    .require("wrong").one_of("LocationKeyword", "adapt_trigger")
+                    .optionally("ConfigKeyword"))
     def handle_wrong_location_intent(self, message):
         if self.settings["tracking"]:
             self.speak("IP geolocation is inherently imprecise. "
