@@ -225,9 +225,12 @@ class LocationTrackerSkill(MycroftSkill):
                     .require("wrong").require("LocationKeyword")
                     .optionally("ConfigKeyword").require("adapt_trigger"))
     def handle_wrong_location_intent(self, message):
-        self.speak("IP geolocation is inherently imprecise. "
-                   "Locations are often near the center of the population. "
-                   "Any location provided by a IP database should not be used to identify a particular address")
+        if self.settings["tracking"]:
+            self.speak("IP geolocation is inherently imprecise. "
+                       "Locations are often near the center of the population. "
+                       "Any location provided by a IP database should not be used to identify a particular address")
+        else:
+            self.speak("Fix me by configuring my location in home.mycroft.ai or in the configuration files")
 
     # location tracking
     @staticmethod
