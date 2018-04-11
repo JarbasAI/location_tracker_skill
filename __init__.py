@@ -124,7 +124,8 @@ class LocationTrackerSkill(MycroftSkill):
         self.settings.store()
 
     @intent_handler(IntentBuilder("SetLocationContextIntent")
-                    .require("InjectionKeyword").require("LocationKeyword").require("ActivateKeyword"))
+                    .require("InjectionKeyword").require("LocationKeyword")
+                    .require("ActivateKeyword"))
     def handle_activate_context_intent(self, message):
         if self.settings["auto_context"]:
             self.speak("Location context injection is already active")
@@ -166,11 +167,11 @@ class LocationTrackerSkill(MycroftSkill):
     def handle_current_location_intent(self, message):
         config = self.location
         city = config.get("city", {}).get("name", "unknown city")
-        country = config.get("city", {}).get("region") \
-            .get("country").get("name", "unknown country")
+        country = config.get("city", {}).get("region").get("country", {}).get("name", "unknown country")
         self.speak("configuration location is " + city + ", " + country)
         if self.settings["auto_context"]:
             self.set_context('Location', city + ', ' + country)
+        self.set_context("adapt_trigger")
 
     @intent_handler(IntentBuilder("TestLocationTrackingIntent")
                     .require("WhereAmIKeyword"))
@@ -179,6 +180,7 @@ class LocationTrackerSkill(MycroftSkill):
         if connected():
             ip = message.context.get("ip")
             if ip:
+                self.set_context("adapt_trigger")
                 config = self.from_remote_ip(update=False)
                 if config:
                     city = config.get("location", {}).get("city", {}) \
@@ -192,6 +194,8 @@ class LocationTrackerSkill(MycroftSkill):
                     return
             else:
                 config = self.update_location(save=False).get("location", {})
+                if self.settings["update_source"] in ["local_ip", "remote_ip"]:
+                    self.set_context("adapt_trigger")
                 if config != {}:
                     city = config.get("city", {}).get("name", "unknown city")
                     country = config.get("city", {}).get("region", {}) \
@@ -204,9 +208,9 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak("No internet connection, could not update "
                        "location from ip address")
 
-    @intent_handler(IntentBuilder("UpdateLocationIntent") \
-                    .require("UpdateKeyword").require(
-        "LocationKeyword").optionally("ConfigKeyword"))
+    @intent_handler(IntentBuilder("UpdateLocationIntent")
+                    .require("UpdateKeyword").require("LocationKeyword")
+                    .optionally("ConfigKeyword"))
     def handle_update_intent(self, message):
         if connected():
             # TODO source select from utterance
@@ -216,6 +220,14 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak(self.location_pretty)
         else:
             self.speak("Cant do that offline")
+
+    @intent_handler(IntentBuilder("WrongLocationIntent")
+                    .require("wrong").require("LocationKeyword")
+                    .optionally("ConfigKeyword").require("adapt_trigger"))
+    def handle_wrong_location_intent(self, message):
+        self.speak("IP geolocation is inherently imprecise. "
+                   "Locations are often near the center of the population. "
+                   "Any location provided by a IP database should not be used to identify a particular address")
 
     # location tracking
     @staticmethod
