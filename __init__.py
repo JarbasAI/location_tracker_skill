@@ -4,7 +4,8 @@ from mycroft.messagebus.message import Message
 from threading import Timer
 import unirest
 from mycroft.util import connected
-from mycroft.configuration.config import Configuration, RemoteConf, DEFAULT_CONFIG
+from mycroft.api import DeviceApi
+from mycroft.configuration.config import LocalConf, USER_CONFIG
 __author__ = 'jarbas'
 
 
@@ -30,13 +31,15 @@ class LocationTrackerSkill(MycroftSkill):
 
     @property
     def home_location(self):
-        conf = Configuration.load_config_stack([RemoteConf(DEFAULT_CONFIG)])
-        return conf.get("location", {})
+        return DeviceApi().get_location()
 
     def reset_location(self):
         if not self.settings["tracking"]:
             self.emitter.emit(Message("configuration.patch",
                                       {"config": self.home_location}))
+            conf = LocalConf(USER_CONFIG)
+            conf['location'] = self.home_location
+            conf.store()
 
     def initialize(self):
         intent = IntentBuilder("UpdateLocationIntent") \
@@ -58,10 +61,10 @@ class LocationTrackerSkill(MycroftSkill):
             "ActivateKeyword").build()
         self.register_intent(intent, self.handle_activate_tracking_intent)
 
-        # disabled, now in official skill
+
         intent = IntentBuilder("WhereAmIIntent") \
             .require("WhereAmIKeyword").build()
-        #self.register_intent(intent, self.handle_where_am_i_intent)
+        self.register_intent(intent, self.handle_test_tracking)
 
 
         # disabled because of munging,
@@ -79,6 +82,7 @@ class LocationTrackerSkill(MycroftSkill):
         #self.register_intent(intent, self.handle_deactivate_context_intent)
 
         if self.settings["tracking"]:
+            self.update_location()
             self.timer.start()
 
     def handle_deactivate_context_intent(self, message):
@@ -106,9 +110,7 @@ class LocationTrackerSkill(MycroftSkill):
             self.timer.cancel()
             self.speak("Location tracking from " +
                        self.settings["update_source"] + " deactivated")
-            self.settings.store()
-            self.emitter.emit(Message("configuration.patch",
-                                      {"config": self.home_location}))
+            self.reset_location()
 
     def handle_activate_tracking_intent(self, message):
         if self.settings["tracking"]:
@@ -122,7 +124,7 @@ class LocationTrackerSkill(MycroftSkill):
         self.settings.store()
 
     def handle_current_location_intent(self, message):
-        config = self.config_core.get("location")
+        config = self.location
         city = config.get("city", {}).get("name", "unknown city")
         country = config.get("city", {}).get("region")\
             .get("country").get("name", "unknown country")
@@ -130,26 +132,30 @@ class LocationTrackerSkill(MycroftSkill):
         if self.settings["auto_context"]:
             self.set_context('Location', city + ', ' + country)
 
-    def handle_where_am_i_intent(self, message):
+    def handle_test_tracking(self, message):
         # TODO dialog files
         if connected():
             ip = message.context.get("ip")
             if ip:
                 config = self.from_remote_ip(update=False)
-                if config != {}:
+                if config:
                     city = config.get("location", {}).get("city", {})\
                         .get("name","unknown city")
                     country = config.get("location", {}).get("city", {}).get(
-                        "region").get("country").get("name", "unknown country")
+                        "region", {}).get("country",{}).get("name", "unknown country")
+                    self.log.info("location tracking: " + str(config))
                     self.speak(
                         "your ip address says you are in " + city + " in " +
                         country)
                     return
             else:
-                config = self.update_location()
+                config = self.update_location(save=False).get("location", {})
                 if config != {}:
+                    city = config.get("city", {}).get("name", "unknown city")
+                    country = config.get("city", {}).get("region",{}) \
+                        .get("country", {}).get("name", "unknown country")
                     self.speak(
-                        "your ip address says you are in " + self.location_pretty)
+                        "your ip address says you are in " + city + ", " + country)
                     return
 
         self.speak("No internet connection, could not update "
@@ -196,17 +202,21 @@ class LocationTrackerSkill(MycroftSkill):
             if update:
                 self.emitter.emit(Message("configuration.patch",
                                           {"config": config}))
+                self.config_core["location"] = location_data
+                conf = LocalConf(USER_CONFIG)
+                conf['location'] = location_data
+                conf.store()
             return config
         else:
             self.log.warning("No internet connection, could not update "
                              "location from ip address")
             return {}
 
-    def update_location(self, source=None):
+    def update_location(self, source=None, save = True):
         if source is None:
             source = self.settings["update_source"]
         if source == "remote_ip_geo":
-            config = self.from_remote_ip()
+            config = self.from_remote_ip(save)
             if config != {}:
                 city = config.get("location", {}).get("city", {})\
                     .get("name", "unknown city")
