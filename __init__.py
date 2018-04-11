@@ -261,7 +261,7 @@ class LocationTrackerSkill(MycroftSkill):
             lat = response.body.get("latitude")
             timezone = response.body.get("timezone")
             if timezone is None:
-                timezone_data = self.home_location.get("timezone", {})
+                timezone_data = self.location.get("timezone", self.home_location.get("timezone", {}))
             else:
                 timezone_data = {"code": timezone, "name": timezone,
                                  "dstOffset": 3600000,
