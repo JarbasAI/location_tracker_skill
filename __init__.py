@@ -4,11 +4,13 @@ from mycroft.messagebus.message import Message
 from mycroft.util import connected
 from mycroft.api import DeviceApi
 from mycroft.configuration.config import LocalConf, USER_CONFIG
-from os.path import join, exists
+from os.path import join, exists, dirname
 from threading import Timer
 import unirest
 import json
 import pygeoip
+import ipgetter
+
 
 __author__ = 'jarbas'
 
@@ -27,15 +29,16 @@ class LocationTrackerSkill(MycroftSkill):
         if "ip_api_url" not in self.settings:
             self.settings["ip_api_url"] = "https://ipapi.co/json/"
         if "geo_ip_db" not in self.settings:
-            self.settings["geo_ip_db"] = join(self.root_dir, 'database', 'GeoLiteCity.dat')
+            self.settings["geo_ip_db"] = join(dirname(__file__), 'GeoLiteCity.dat')
 
-        self.timer = Timer(60 * self.settings["update_mins"],
+        self.timer = Timer(60 * int(self.settings["update_mins"]),
                            self.update_location)
         self.timer.setDaemon(True)
 
         self.create_settings_meta()
         self.settings.set_changed_callback(self.reset_location)
 
+    def initialize(self):
         if self.settings["tracking"]:
             self.update_location()
             self.timer.start()
@@ -110,8 +113,9 @@ class LocationTrackerSkill(MycroftSkill):
             with open(settings_path, "w") as f:
                 f.write(json.dumps(meta))
 
-    @intent_handler(IntentBuilder("UnsetLocationContextIntent")\
-                    .require("InjectionKeyword").require("LocationKeyword").require("DeactivateKeyword"))
+    @intent_handler(IntentBuilder("UnsetLocationContextIntent")
+                    .require("InjectionKeyword").require("LocationKeyword")
+                    .require("DeactivateKeyword"))
     def handle_deactivate_context_intent(self, message):
         if not self.settings["auto_context"]:
             self.speak("Location context injection is not active")
@@ -120,7 +124,7 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak("Location context injection deactivated")
         self.settings.store()
 
-    @intent_handler(IntentBuilder("SetLocationContextIntent")\
+    @intent_handler(IntentBuilder("SetLocationContextIntent")
                     .require("InjectionKeyword").require("LocationKeyword").require("ActivateKeyword"))
     def handle_activate_context_intent(self, message):
         if self.settings["auto_context"]:
@@ -130,9 +134,9 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak("Location context injection activated")
         self.settings.store()
 
-    @intent_handler(IntentBuilder("UnSetLocationTrackingIntent") \
-            .require("TrackingKeyword").require("LocationKeyword").require(
-            "DeactivateKeyword"))
+    @intent_handler(IntentBuilder("UnSetLocationTrackingIntent")
+                    .require("TrackingKeyword").require("LocationKeyword")
+                    .require("DeactivateKeyword"))
     def handle_deactivate_tracking_intent(self, message):
         if not self.settings["tracking"]:
             self.speak("Location tracking from " +
@@ -144,9 +148,9 @@ class LocationTrackerSkill(MycroftSkill):
                        self.settings["update_source"] + " deactivated")
             self.reset_location()
 
-    @intent_handler(IntentBuilder("SetLocationTrackingIntent") \
-            .require("TrackingKeyword").require("LocationKeyword").require(
-            "ActivateKeyword"))
+    @intent_handler(IntentBuilder("SetLocationTrackingIntent")
+                    .require("TrackingKeyword").require("LocationKeyword")
+                    .require("ActivateKeyword"))
     def handle_activate_tracking_intent(self, message):
         if self.settings["tracking"]:
             self.speak("Location tracking from " +
@@ -158,8 +162,8 @@ class LocationTrackerSkill(MycroftSkill):
                        self.settings["update_source"] + " activated")
         self.settings.store()
 
-    @intent_handler(IntentBuilder("CurrentLocationIntent") \
-            .require("CurrentKeyword").require("LocationKeyword"))
+    @intent_handler(IntentBuilder("CurrentLocationIntent")
+                    .require("CurrentKeyword").require("LocationKeyword"))
     def handle_current_location_intent(self, message):
         config = self.location
         city = config.get("city", {}).get("name", "unknown city")
@@ -169,6 +173,8 @@ class LocationTrackerSkill(MycroftSkill):
         if self.settings["auto_context"]:
             self.set_context('Location', city + ', ' + country)
 
+    @intent_handler(IntentBuilder("TestLocationTrackingIntent")
+                    .require("WhereAmIKeyword"))
     def handle_test_tracking(self, message):
         # TODO dialog files
         if connected():
@@ -194,8 +200,9 @@ class LocationTrackerSkill(MycroftSkill):
                     self.speak(
                         "your ip address says you are in " + city + ", " + country)
                     return
-
-        self.speak("No internet connection, could not update "
+                self.speak("could not get location data for unknown reasons")
+        else:
+            self.speak("No internet connection, could not update "
                              "location from ip address")
 
     @intent_handler(IntentBuilder("UpdateLocationIntent") \
@@ -212,17 +219,38 @@ class LocationTrackerSkill(MycroftSkill):
             self.speak("Cant do that offline")
 
     # location tracking
-
-    def get_ip(self):
-        return "127.0.0.1"
+    @staticmethod
+    def get_ip():
+        return ipgetter.myip()
 
     def from_ip_db(self, ip=None, update=True):
+        self.log.info("Retrieving location data from ip database")
         ip = ip or self.get_ip()
         g = pygeoip.GeoIP(self.settings["geo_ip_db"])
         data = g.record_by_addr(ip) or {}
+        city = data.get("city", "")
+        region_code = data.get("region_code", "")
+        country_code = data.get("country_code", "")
+        country_name = data.get("country_name", "")
+        region = city
+        longitude = data.get("longitude", "")
+        latitude = data.get("latitude", "")
+        timezone = data.get("time_zone", "")
+        city_code = data.get("postal_code", "")
+        data = self.build_location_dict(city, region_code, country_code, country_name,
+                                        region, longitude, latitude, timezone, city_code)
+        config = {"location": data}
+        if update:
+            self.emitter.emit(Message("configuration.patch",
+                                      {"config": config}))
+            self.config_core["location"] = data
+            conf = LocalConf(USER_CONFIG)
+            conf['location'] = data
+            conf.store()
+        return config
 
     def from_remote_ip(self, update = True):
-        self.log.info("Retrieving location data from ip address")
+        self.log.info("Retrieving location data from ip address api")
         if connected():
             response = unirest.get("https://ipapi.co/json/")
             city = response.body.get("city")
@@ -251,7 +279,7 @@ class LocationTrackerSkill(MycroftSkill):
             config = {"location": location_data}
             if update:
                 self.emitter.emit(Message("configuration.patch",
-                                          {"config": config}))
+                                              {"config": config}))
                 self.config_core["location"] = location_data
                 conf = LocalConf(USER_CONFIG)
                 conf['location'] = location_data
@@ -269,8 +297,7 @@ class LocationTrackerSkill(MycroftSkill):
 
     def reset_location(self):
         if not self.settings["tracking"]:
-            self.emitter.emit(Message("configuration.patch",
-                                      {"config": self.home_location}))
+            self.emitter.emit(Message("configuration.patch", {"config": self.home_location}))
             conf = LocalConf(USER_CONFIG)
             conf['location'] = self.home_location
             conf.store()
@@ -278,7 +305,7 @@ class LocationTrackerSkill(MycroftSkill):
     def update_location(self, source=None, save = True):
         if source is None:
             source = self.settings["update_source"]
-        if source == "remote_ip_geo":
+        if source == "remote_ip":
             config = self.from_remote_ip(save)
             if config != {}:
                 city = config.get("location", {}).get("city", {})\
@@ -287,29 +314,39 @@ class LocationTrackerSkill(MycroftSkill):
                     "region").get("country").get("name", "unknown country")
                 if self.settings["auto_context"]:
                     self.set_context('Location', city + ', ' + country)
+        elif source == "local_ip":
+            config = self.from_ip_db(update=save)
+            if config != {}:
+                city = config.get("location", {}).get("city", {})\
+                    .get("name", "unknown city")
+                country = config.get("location", {}).get("city", {}).get(
+                    "region", {}).get("country", {}).get("name", "unknown country")
+                if self.settings["auto_context"]:
+                    self.set_context('Location', city + ', ' + country)
         else:
             self.log.info("Failed to retrieve location data from " + source)
             config = {}
         return config
 
-    def build_location_dict(self, city="", region_code="", country_code="",
-                      country_name="", region="", longitude=0, latitude=0,
-                      timezone=""):
-        region_data = {"code": region_code, "name": region,
-                       "country": {
-                           "code": country_code,
-                           "name": country_name}}
-        city_data = {"code": city, "name": city,
-                     "state": region_data,
-                     "region": region_data}
-        timezone_data = {"code": timezone, "name": timezone,
-                         "dstOffset": 3600000,
-                         "offset": -21600000}
-        coordinate_data = {"latitude": float(latitude),
-                           "longitude": float(longitude)}
-        return {"city": city_data,
-                "coordinate": coordinate_data,
-                "timezone": timezone_data}
+    @staticmethod
+    def build_location_dict(city="", region_code="", country_code="",
+                            country_name="", region="", longitude=0, latitude=0,
+                            timezone="", city_code=""):
+            region_data = {"code": region_code, "name": region,
+                           "country": {
+                               "code": country_code,
+                               "name": country_name}}
+            city_data = {"code": city_code or city, "name": city,
+                         "state": region_data,
+                         "region": region_data}
+            timezone_data = {"code": timezone, "name": timezone,
+                             "dstOffset": 3600000,
+                             "offset": -21600000}
+            coordinate_data = {"latitude": float(latitude),
+                               "longitude": float(longitude)}
+            return {"city": city_data,
+                    "coordinate": coordinate_data,
+                    "timezone": timezone_data}
 
 
 def create_skill():
