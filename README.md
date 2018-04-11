@@ -23,9 +23,11 @@ Current localization sources:
 * "deactivate location tracking"
 * "update location"
 * "where am i"
+* "location is wrong"
 
 ## TODO
 
+* use dialog files instead of hard coded speech
 * use options in settingsmeta instead of text field (avoid user screw ups)
 * more accurate sources (GPS, wifi geo location)
 * take device uuid into account for skill settings
