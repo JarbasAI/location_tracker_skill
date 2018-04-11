@@ -8,7 +8,7 @@ Updates device location, the mycroft home location configuration remains
 unchanged
 
 * gives you privacy
-* skills that need location still work ( date time correct by default, unified needs selects correct feed)
+* skills that need location still work ( date time correct by default, unified new selects correct feed)
 * fully configurable
 
 Current localization sources:
