@@ -11,7 +11,6 @@ import json
 import pygeoip
 import ipgetter
 
-
 __author__ = 'jarbas'
 
 
@@ -45,68 +44,68 @@ class LocationTrackerSkill(MycroftSkill):
 
     def create_settings_meta(self):
         meta = {
-          "name": "Device Location Tracker Skill",
-          "skillMetadata":
-          {"sections": [
+            "name": "Device Location Tracker Skill",
+            "skillMetadata":
+                {"sections": [
 
-            {
-              "name": "Configuration",
-              "fields":
-                [
-                  {
-                    "type": "label",
-                    "label": "Currently this skill can only track location from IP address, soon wifi geolocation wil be added, and eventually GPS, available options are 'local_ip' and 'remote_ip', using a local database or a web api"
-                  },
-                  {
-                    "type": "text",
-                    "name": "update_source",
-                    "value": "remote_ip",
-                    "label": "where to get location data from"
-                  },
-                  {
-                    "type": "label",
-                    "label": "Is location tracking active? disabling this reverts location"
-                  },
-                  {
-                    "type": "checkbox",
-                    "name": "tracking",
-                    "value": "false",
-                    "label": "tracking"
-                  },
-                  {
-                    "type": "label",
-                    "label": "At which interval, in minutes, should location be updated?"
-                  },
-                  {
-                    "type": "number",
-                    "name": "update_mins",
-                    "value": "15",
-                    "label": "update interval"
-                  },
-                  {
-                    "type": "label",
-                    "label": "This is the api where we get remote_ip location data from"
-                  },
-                  {
-                    "type": "text",
-                    "name": "ip_api_url",
-                    "value": "https://ipapi.co/json/",
-                    "label": "url"
-                  },
-                  {
-                    "type": "label",
-                    "label": "This is the path to the database where we get local_ip location data from"
-                  },
-                  {
-                    "type": "text",
-                    "name": "geo_ip_db",
-                    "value": self.settings["geo_ip_db"],
-                    "label": "geo ip database"
-                  }
+                    {
+                        "name": "Configuration",
+                        "fields":
+                            [
+                                {
+                                    "type": "label",
+                                    "label": "Currently this skill can only track location from IP address, soon wifi geolocation wil be added, and eventually GPS, available options are 'local_ip' and 'remote_ip', using a local database or a web api"
+                                },
+                                {
+                                    "type": "text",
+                                    "name": "update_source",
+                                    "value": "remote_ip",
+                                    "label": "where to get location data from"
+                                },
+                                {
+                                    "type": "label",
+                                    "label": "Is location tracking active? disabling this reverts location"
+                                },
+                                {
+                                    "type": "checkbox",
+                                    "name": "tracking",
+                                    "value": "false",
+                                    "label": "tracking"
+                                },
+                                {
+                                    "type": "label",
+                                    "label": "At which interval, in minutes, should location be updated?"
+                                },
+                                {
+                                    "type": "number",
+                                    "name": "update_mins",
+                                    "value": "15",
+                                    "label": "update interval"
+                                },
+                                {
+                                    "type": "label",
+                                    "label": "This is the api where we get remote_ip location data from"
+                                },
+                                {
+                                    "type": "text",
+                                    "name": "ip_api_url",
+                                    "value": "https://ipapi.co/json/",
+                                    "label": "url"
+                                },
+                                {
+                                    "type": "label",
+                                    "label": "This is the path to the database where we get local_ip location data from"
+                                },
+                                {
+                                    "type": "text",
+                                    "name": "geo_ip_db",
+                                    "value": self.settings["geo_ip_db"],
+                                    "label": "geo ip database"
+                                }
+                            ]
+                    }
                 ]
-            }
-          ]
-          }
+                }
         }
         settings_path = join(self._dir, "settingsmeta.json")
         if not exists(settings_path):
@@ -167,7 +166,7 @@ class LocationTrackerSkill(MycroftSkill):
     def handle_current_location_intent(self, message):
         config = self.location
         city = config.get("city", {}).get("name", "unknown city")
-        country = config.get("city", {}).get("region")\
+        country = config.get("city", {}).get("region") \
             .get("country").get("name", "unknown country")
         self.speak("configuration location is " + city + ", " + country)
         if self.settings["auto_context"]:
@@ -182,10 +181,10 @@ class LocationTrackerSkill(MycroftSkill):
             if ip:
                 config = self.from_remote_ip(update=False)
                 if config:
-                    city = config.get("location", {}).get("city", {})\
-                        .get("name","unknown city")
+                    city = config.get("location", {}).get("city", {}) \
+                        .get("name", "unknown city")
                     country = config.get("location", {}).get("city", {}).get(
-                        "region", {}).get("country",{}).get("name", "unknown country")
+                        "region", {}).get("country", {}).get("name", "unknown country")
                     self.log.info("location tracking: " + str(config))
                     self.speak(
                         "your ip address says you are in " + city + " in " +
@@ -195,7 +194,7 @@ class LocationTrackerSkill(MycroftSkill):
                 config = self.update_location(save=False).get("location", {})
                 if config != {}:
                     city = config.get("city", {}).get("name", "unknown city")
-                    country = config.get("city", {}).get("region",{}) \
+                    country = config.get("city", {}).get("region", {}) \
                         .get("country", {}).get("name", "unknown country")
                     self.speak(
                         "your ip address says you are in " + city + ", " + country)
@@ -203,11 +202,11 @@ class LocationTrackerSkill(MycroftSkill):
                 self.speak("could not get location data for unknown reasons")
         else:
             self.speak("No internet connection, could not update "
-                             "location from ip address")
+                       "location from ip address")
 
     @intent_handler(IntentBuilder("UpdateLocationIntent") \
-            .require("UpdateKeyword").require(
-            "LocationKeyword").optionally("ConfigKeyword"))
+                    .require("UpdateKeyword").require(
+        "LocationKeyword").optionally("ConfigKeyword"))
     def handle_update_intent(self, message):
         if connected():
             # TODO source select from utterance
@@ -249,7 +248,7 @@ class LocationTrackerSkill(MycroftSkill):
             conf.store()
         return config
 
-    def from_remote_ip(self, update = True):
+    def from_remote_ip(self, update=True):
         self.log.info("Retrieving location data from ip address api")
         if connected():
             response = unirest.get("https://ipapi.co/json/")
@@ -262,7 +261,7 @@ class LocationTrackerSkill(MycroftSkill):
             lat = response.body.get("latitude")
             timezone = response.body.get("timezone")
             if timezone is None:
-                timezone_data = self.home_location.get("timezone")
+                timezone_data = self.home_location.get("timezone", {})
             else:
                 timezone_data = {"code": timezone, "name": timezone,
                                  "dstOffset": 3600000,
@@ -279,7 +278,7 @@ class LocationTrackerSkill(MycroftSkill):
             config = {"location": location_data}
             if update:
                 self.emitter.emit(Message("configuration.patch",
-                                              {"config": config}))
+                                          {"config": config}))
                 self.config_core["location"] = location_data
                 conf = LocalConf(USER_CONFIG)
                 conf['location'] = location_data
@@ -302,13 +301,13 @@ class LocationTrackerSkill(MycroftSkill):
             conf['location'] = self.home_location
             conf.store()
 
-    def update_location(self, source=None, save = True):
+    def update_location(self, source=None, save=True):
         if source is None:
             source = self.settings["update_source"]
         if source == "remote_ip":
             config = self.from_remote_ip(save)
             if config != {}:
-                city = config.get("location", {}).get("city", {})\
+                city = config.get("location", {}).get("city", {}) \
                     .get("name", "unknown city")
                 country = config.get("location", {}).get("city", {}).get(
                     "region").get("country").get("name", "unknown country")
@@ -317,7 +316,7 @@ class LocationTrackerSkill(MycroftSkill):
         elif source == "local_ip":
             config = self.from_ip_db(update=save)
             if config != {}:
-                city = config.get("location", {}).get("city", {})\
+                city = config.get("location", {}).get("city", {}) \
                     .get("name", "unknown city")
                 country = config.get("location", {}).get("city", {}).get(
                     "region", {}).get("country", {}).get("name", "unknown country")
@@ -332,21 +331,21 @@ class LocationTrackerSkill(MycroftSkill):
     def build_location_dict(city="", region_code="", country_code="",
                             country_name="", region="", longitude=0, latitude=0,
                             timezone="", city_code=""):
-            region_data = {"code": region_code, "name": region,
-                           "country": {
-                               "code": country_code,
-                               "name": country_name}}
-            city_data = {"code": city_code or city, "name": city,
-                         "state": region_data,
-                         "region": region_data}
-            timezone_data = {"code": timezone, "name": timezone,
-                             "dstOffset": 3600000,
-                             "offset": -21600000}
-            coordinate_data = {"latitude": float(latitude),
-                               "longitude": float(longitude)}
-            return {"city": city_data,
-                    "coordinate": coordinate_data,
-                    "timezone": timezone_data}
+        region_data = {"code": region_code, "name": region,
+                       "country": {
+                           "code": country_code,
+                           "name": country_name}}
+        city_data = {"code": city_code or city, "name": city,
+                     "state": region_data,
+                     "region": region_data}
+        timezone_data = {"code": timezone, "name": timezone,
+                         "dstOffset": 3600000,
+                         "offset": -21600000}
+        coordinate_data = {"latitude": float(latitude),
+                           "longitude": float(longitude)}
+        return {"city": city_data,
+                "coordinate": coordinate_data,
+                "timezone": timezone_data}
 
 
 def create_skill():
