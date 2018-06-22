@@ -1,3 +1,4 @@
 unirest
-ipgetter
+geopy
 pygeoip
+timezonefinder
