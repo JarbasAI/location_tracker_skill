@@ -37,7 +37,7 @@ Current localization sources:
 
 wifi geolocation work better with lots of wifi access points, to scan for wifi networks it is required to use sudo
 
-you need to edit your /etc/sudoers file and allow the wifi scan command not use sudo without password
+you need to edit your /etc/sudoers file and allow the wifi scan command to use sudo without password
 
     sudo nano /etc/sudoers
     
