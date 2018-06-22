@@ -1,6 +1,8 @@
 import json
 import re
 import subprocess
+from builtins import object
+from builtins import str
 from os.path import join, exists, dirname
 from subprocess import check_output
 from threading import Timer
@@ -21,7 +23,7 @@ __author__ = 'jarbas'
 
 
 def scan_wifi(interface="wlan0", sudo=False):
-    class _LineMatcher:
+    class _LineMatcher(object):
         def __init__(self, regexp, handler):
             self.regexp = re.compile(regexp)
             self.handler = handler
