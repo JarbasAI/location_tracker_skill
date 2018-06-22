@@ -9,7 +9,6 @@ from threading import Timer
 
 import pygeoip
 import requests
-import unirest
 from adapt.intent import IntentBuilder
 from geopy.geocoders import Yandex, Nominatim
 from mycroft.api import DeviceApi
@@ -531,7 +530,8 @@ class LocationTrackerSkill(MycroftSkill):
     def from_remote_ip(self, update=True):
         self.log.info("Retrieving location data from ip address api")
         if connected():
-            response = unirest.get("https://ipapi.co/json/")
+            response = requests.get("https://ipapi.co/json/").json()
+            respone = json.loads(response)
             city = response.body.get("city")
             region_code = response.body.get("region_code")
             country = response.body.get("country")
