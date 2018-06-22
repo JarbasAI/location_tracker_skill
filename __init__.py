@@ -267,7 +267,7 @@ class LocationTrackerSkill(MycroftSkill):
         if "wifi_sudo" not in self.settings:
             self.settings["wifi_sudo"] = False
         if "google_geolocate_key" not in self.settings:
-            self.settings["google_geolocate_key"] = "xxxxxxxx"
+            self.settings["google_geolocate_key"] = "xxx"
         if "update_source" not in self.settings:
             self.settings["update_source"] = "wifi"
         if "tracking" not in self.settings:
@@ -496,7 +496,7 @@ class LocationTrackerSkill(MycroftSkill):
             city = self.location.get("city", {}).get("name", "unknown city")
             country = self.location.get("city", {}).get("state", {}).get(
                 "country",
-                                                                  {}).get(
+                {}).get(
                 "name", "unknown country")
             text = self.location.get("address", city + ", " + country)
             self.speak(text)
@@ -541,7 +541,7 @@ class LocationTrackerSkill(MycroftSkill):
         city_code = data.get("postal_code", "")
         data = self.build_location_dict(city, region_code, country_code, country_name,
                                         region, longitude, latitude, timezone, city_code)
-        config = {"location": data}
+        config = {"location": data, "address": city + ", " + country_name}
         if update:
             self.emitter.emit(Message("configuration.patch",
                                       {"config": config}))
@@ -555,7 +555,7 @@ class LocationTrackerSkill(MycroftSkill):
         self.log.info("Retrieving location data from ip address api")
         if connected():
             response = requests.get("https://ipapi.co/json/").json()
-            respone = json.loads(response)
+            response = json.loads(response)
             city = response.body.get("city")
             region_code = response.body.get("region_code")
             country = response.body.get("country")
@@ -579,7 +579,8 @@ class LocationTrackerSkill(MycroftSkill):
             coordinate_data = {"latitude": float(lat), "longitude": float(lon)}
             location_data = {"city": city_data, "coordinate": coordinate_data,
                              "timezone": timezone_data}
-            config = {"location": location_data}
+            config = {"location": location_data,
+                      "address": city + ", " + country_name}
             if update:
                 self.emitter.emit(Message("configuration.patch",
                                           {"config": config}))
@@ -609,7 +610,11 @@ class LocationTrackerSkill(MycroftSkill):
         data["accuracy"] = accuracy
         LOG.info("reverse geocoding data: " + str(data))
         location = self.location.copy()
-        location["city"]["code"] = data["city"]
+        location["address"] = data["address"]
+        if data.get("zip"):
+            location["city"]["code"] = data["zip"]
+        else:
+            location["city"]["code"] = data["city"]
         location["city"]["name"] = data["city"]
         location["city"]["state"]["name"] = data["state"]
         # TODO state code
