@@ -267,8 +267,7 @@ class LocationTrackerSkill(MycroftSkill):
         if "wifi_sudo" not in self.settings:
             self.settings["wifi_sudo"] = False
         if "google_geolocate_key" not in self.settings:
-            self.settings[
-                "google_geolocate_key"] = "AIzaSyDawBcRB7vv-YhNix2SRb8WOOciF3tmOBk"
+            self.settings["google_geolocate_key"] = "xxxxxxxx"
         if "update_source" not in self.settings:
             self.settings["update_source"] = "wifi"
         if "tracking" not in self.settings:
@@ -494,11 +493,12 @@ class LocationTrackerSkill(MycroftSkill):
                 "updating location from " + source.replace("-", " ").replace(
                     "_", " "))
             self.update_location(source)
-            city = config.get("city", {}).get("name", "unknown city")
-            country = config.get("city", {}).get("state", {}).get("country",
+            city = self.location.get("city", {}).get("name", "unknown city")
+            country = self.location.get("city", {}).get("state", {}).get(
+                "country",
                                                                   {}).get(
                 "name", "unknown country")
-            text = config.get("address", city + ", " + country)
+            text = self.location.get("address", city + ", " + country)
             self.speak(text)
         else:
             self.speak("Cant do that offline")
