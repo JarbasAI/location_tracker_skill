@@ -16,6 +16,7 @@ from mycroft.configuration.config import LocalConf, USER_CONFIG
 from mycroft.messagebus.message import Message
 from mycroft.skills.core import MycroftSkill, intent_handler
 from mycroft.util import connected
+from mycroft.util.log import LOG
 from timezonefinder import TimezoneFinder
 
 __author__ = 'jarbas'
@@ -90,7 +91,7 @@ def scan_wifi(interface="wlan0", sudo=False):
             if result:
                 m.handler(line, result, networks)
                 break
-
+    LOG.info("scanned networks: " + str(networks))
     return networks
 
 
@@ -152,6 +153,8 @@ def geolocate(address, yandex=False, try_all=True):
         location = geolocator.geocode(address, timeout=10)
         if location is None and try_all:
             return geolocate(address, False, False)
+        elif location is None:
+            return {"address": address}
         data["country"] = location.address.split(",")[-1].strip()
         try:
             data["city"] = location.address.split(",")[-3].strip()
@@ -264,7 +267,8 @@ class LocationTrackerSkill(MycroftSkill):
         if "wifi_sudo" not in self.settings:
             self.settings["wifi_sudo"] = False
         if "google_geolocate_key" not in self.settings:
-            self.settings["google_geolocate_key"] = ""
+            self.settings[
+                "google_geolocate_key"] = "AIzaSyDawBcRB7vv-YhNix2SRb8WOOciF3tmOBk"
         if "update_source" not in self.settings:
             self.settings["update_source"] = "wifi"
         if "tracking" not in self.settings:
@@ -287,6 +291,7 @@ class LocationTrackerSkill(MycroftSkill):
         if self.settings["tracking"]:
             self.update_location()
             self.timer.start()
+        self.settings.store()
 
     def create_settings_meta(self):
         meta = {
@@ -427,10 +432,13 @@ class LocationTrackerSkill(MycroftSkill):
     @intent_handler(IntentBuilder("CurrentLocationIntent")
                     .require("CurrentKeyword").require("LocationKeyword"))
     def handle_current_location_intent(self, message):
-        config = self.location
+        config = self.location or {}
         city = config.get("city", {}).get("name", "unknown city")
-        country = config.get("city", {}).get("region").get("country", {}).get("name", "unknown country")
-        self.speak("configuration location is " + city + ", " + country)
+        country = config.get("city", {}).get("state", {}).get("country",
+                                                              {}).get("name",
+                                                                      "unknown country")
+        text = config.get("address", city + ", " + country)
+        self.speak("configuration location is " + text)
         if self.settings["auto_context"]:
             self.set_context('Location', city + ', ' + country)
         self.set_context("adapt_trigger")
@@ -456,19 +464,24 @@ class LocationTrackerSkill(MycroftSkill):
                     return
             else:
                 config = self.update_location(save=False).get("location", {})
-                if self.settings["update_source"] in ["local_ip", "remote_ip"]:
-                    self.set_context("adapt_trigger")
+
+                self.set_context("adapt_trigger")
                 if config != {}:
                     city = config.get("city", {}).get("name", "unknown city")
                     country = config.get("city", {}).get("region", {}) \
                         .get("country", {}).get("name", "unknown country")
-                    self.speak(
-                        "your ip address says you are in " + city + ", " + country)
+                    if self.settings["update_source"] in ["local_ip",
+                                                          "remote_ip"]:
+                        self.speak(
+                            "your ip address says you are in " + city + ", " + country)
+                    else:
+                        self.speak(
+                            "the wifi access points around you say you are in " + city + ", " + country)
                     return
                 self.speak("could not get location data for unknown reasons")
         else:
             self.speak("No internet connection, could not update "
-                       "location from ip address")
+                       "location")
 
     @intent_handler(IntentBuilder("UpdateLocationIntent")
                     .require("UpdateKeyword").require("LocationKeyword")
@@ -477,9 +490,16 @@ class LocationTrackerSkill(MycroftSkill):
         if connected():
             # TODO source select from utterance
             source = self.settings["update_source"]
-            self.speak("updating location from ip address")
+            self.speak(
+                "updating location from " + source.replace("-", " ").replace(
+                    "_", " "))
             self.update_location(source)
-            self.speak(self.location_pretty)
+            city = config.get("city", {}).get("name", "unknown city")
+            country = config.get("city", {}).get("state", {}).get("country",
+                                                                  {}).get(
+                "name", "unknown country")
+            text = config.get("address", city + ", " + country)
+            self.speak(text)
         else:
             self.speak("Cant do that offline")
 
@@ -488,9 +508,13 @@ class LocationTrackerSkill(MycroftSkill):
                     .optionally("ConfigKeyword"))
     def handle_wrong_location_intent(self, message):
         if self.settings["tracking"]:
-            self.speak("IP geolocation is inherently imprecise. "
-                       "Locations are often near the center of the population. "
-                       "Any location provided by a IP database should not be used to identify a particular address")
+            if self.settings["update_source"] != "wifi":
+                self.speak("IP geolocation is inherently imprecise. "
+                           "Locations are often near the center of the population. "
+                           "Any location provided by a IP database should not be used to identify a particular address")
+            else:
+                self.speak(
+                    "Try again later, wifi geolocation depends on google's database")
         else:
             self.speak("Fix me by configuring my location in home.mycroft.ai or in the configuration files")
 
@@ -571,14 +595,19 @@ class LocationTrackerSkill(MycroftSkill):
 
     def from_wifi(self, update=True):
         if not self.settings["google_geolocate_key"]:
+            self.speak("you need a google geolocation services api key "
+                       "in order to use wifi geolocation")
             self.log.error("you need a google geolocation services api key "
                            "in order to use wifi geolocation")
             return {}
         lat, lon, accuracy = wifi_geolocate(
             api=self.settings["google_geolocate_key"],
             sudo=self.settings["wifi_sudo"])
-        address = reverse_geolocate(lat, lon)
-        data = geolocate(address)
+        LOG.info("\nlatitude: " + str(lat) + "\nlongitude: " + str(
+            lon) + "\naccuracy (meters) : " + str(accuracy))
+        data = reverse_geolocate(lat, lon)
+        data["accuracy"] = accuracy
+        LOG.info("reverse geocoding data: " + str(data))
         location = self.location.copy()
         location["city"]["code"] = data["city"]
         location["city"]["name"] = data["city"]
